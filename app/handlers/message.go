@@ -20,6 +20,7 @@ func GetAllMessage(c *gin.Context) {
 	// GET CACHE DATA COUNTRY INFO
 	cache, err := GetCache(CacheKeyMessages())
 
+	// CHECK IF CACHE EXIST DO THIS
 	if cache != "" {
 		// BIND CACHE TO STRUCT
 		err = json.Unmarshal([]byte(cache), &messages)
@@ -31,7 +32,6 @@ func GetAllMessage(c *gin.Context) {
 	// BUILD RESPONSE
 	gr := GeneralResponseSuccessBuild(true,
 		0, "Success")
-
 	c.JSON(http.StatusOK, gin.H{
 		"result":           messages,
 		"general_response": gr,
@@ -57,13 +57,10 @@ func AddMessage(c *gin.Context) {
 	defer c.Request.Body.Close()
 
 	conn, err :=  config.RabbitMqConnection()
-	//conn, err := amqp.Dial("amqp://"+ viper.GetString("RABBITMQ_USERNAME")+":"+viper.GetString("RABBITMQ_PASSWORD")+"@"+viper.GetString("RABBITMQ_HOST")+":"+viper.GetString("RABBITMQ_PORT")+"/")
 	if err != nil {
 		fmt.Println(err.Error())
 		ShowResponseError(http.StatusInternalServerError, c, 5002, err.Error())
 	}
-
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -71,6 +68,7 @@ func AddMessage(c *gin.Context) {
 		ShowResponseError(http.StatusInternalServerError, c, 5002, err.Error())
 	}
 
+	// WILL BE EXECUTED LAST
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
@@ -89,14 +87,17 @@ func AddMessage(c *gin.Context) {
 		ShowResponseError(http.StatusInternalServerError, c, 5002, err.Error())
 	}
 
+	// DEFINE STRUCT
 	var message types.MessageRequest
 	var messages []types.MessageRequest
 
+	// ASSIGN VALUE TO STRUCT
 	message.Text = param.Text
 
 	// GET CACHE DATA COUNTRY INFO
 	cache, err := GetCache(CacheKeyMessages())
 
+	// CHECK IF CACHE EXIST DO THIS
 	if cache != "" {
 		// BIND CACHE TO STRUCT
 		err = json.Unmarshal([]byte(cache), &messages)
@@ -105,9 +106,11 @@ func AddMessage(c *gin.Context) {
 		}
 	}
 
+	// APPEND TEXT TO ARRAY MESSAGE
 	messages = append(messages, message)
 	SetCache(CacheKeyMessages(), messages)
 
+	// PUBLISH MESSAGE
 	body := param.Text
 	err = ch.Publish(
 		"messages", // exchange
@@ -125,11 +128,9 @@ func AddMessage(c *gin.Context) {
 		ShowResponseError(http.StatusInternalServerError, c, 5002, err.Error())
 	}
 
-	var data = types.MessageResponse{}
-
-	data.Text = "Sent" + param.Text
-
 	// BUILD RESPONSE
+	var data = types.MessageResponse{}
+	data.Text = "Sent" + param.Text
 	gr := GeneralResponseSuccessBuild(true,
 		0, "Success")
 
