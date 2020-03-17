@@ -1,0 +1,55 @@
+version: '3'
+services:
+#  postgres:
+#    image: postgres
+#    environment:
+#      POSTGRES_DB: warpin
+#      POSTGRES_USER: warpin
+#      POSTGRES_PASSWORD: warpin
+#    ports:
+#      - 5434:5432
+#    networks:
+#      - warpin
+#
+#  elasticsearch:
+#     image: docker.elastic.co/elasticsearch/elasticsearch:5.4.0
+#     ports:
+#       - 9200:9200
+#     networks:
+#       - warpin
+#
+  redis:
+    image: redis
+    #build: ./docker/redis
+    volumes:
+        -  ./data/redis:/data
+    ports:
+        - 6377:6379
+    networks:
+        - warpin
+
+  rabbitmq:
+    image: 'rabbitmq:3.6-management-alpine'
+    ports:
+      # The standard AMQP protocol port
+      - '5672:5672'
+      # HTTP management UI
+      - '15672:15672'
+    networks:
+      - warpin
+
+  app:
+    build:
+      context: .
+    ports:
+      - 8888:8888
+    depends_on:
+#      - postgres
+#      - elasticsearch
+      - redis
+    networks:
+      - warpin
+ 
+networks:
+  warpin:
+    driver: bridge
